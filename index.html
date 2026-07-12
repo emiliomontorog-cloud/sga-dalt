@@ -84,6 +84,7 @@ body{font-size:13px;background:#eef1f7;font-family:'Segoe UI',system-ui,sans-ser
   <div class="ms-auto d-flex flex-wrap justify-content-end gap-1">
     <button class="nb act" id="nb-dash" onclick="navv('dash')"><i class="bi bi-speedometer2"></i><span class="d-none d-lg-inline ms-1">Dashboard</span></button>
     <button class="nb" id="nb-rec"  onclick="navv('rec')"><i class="bi bi-box-arrow-in-down"></i><span class="d-none d-lg-inline ms-1">Recepción</span></button>
+    <button class="nb" id="nb-ctl"  onclick="navv('ctl')"><i class="bi bi-clipboard2-check"></i><span class="d-none d-lg-inline ms-1">Control</span></button>
     <button class="nb" id="nb-alm"  onclick="navv('alm')"><i class="bi bi-grid-3x3-gap"></i><span class="d-none d-lg-inline ms-1">Almacén</span></button>
     <button class="nb" id="nb-ped"  onclick="navv('ped')"><i class="bi bi-clipboard-check"></i><span class="d-none d-lg-inline ms-1">Pedidos</span></button>
     <button class="nb" id="nb-rep"  onclick="navv('rep')"><i class="bi bi-arrow-repeat"></i><span class="d-none d-lg-inline ms-1">Reposición</span></button>
@@ -102,6 +103,7 @@ body{font-size:13px;background:#eef1f7;font-family:'Segoe UI',system-ui,sans-ser
 <div class="container-fluid p-2">
   <div id="v-dash" class="view act"></div>
   <div id="v-rec"  class="view"></div>
+  <div id="v-ctl"  class="view"></div>
   <div id="v-alm"  class="view"></div>
   <div id="v-ped"  class="view"></div>
   <div id="v-rep"  class="view"></div>
@@ -198,33 +200,6 @@ var FAMILIES=[{id:'F01',name:'Aceites y Condimentos'},{id:'F02',name:'Alimentaci
 var SUBFAMILIES=[{id:'SF01',fam:'F01',name:'Aceites'},{id:'SF02',fam:'F01',name:'Vinagres'},{id:'SF03',fam:'F02',name:'Harinas/Azúcares'},{id:'SF04',fam:'F02',name:'Arroces'},{id:'SF05',fam:'F02',name:'Pastas'},{id:'SF06',fam:'F03',name:'Conservas Veg.'},{id:'SF07',fam:'F03',name:'Legumbres'},{id:'SF08',fam:'F04',name:'Leche UHT'}];
 var SUPPLIERS=[{id:'SUP001',code:'PRV001',name:'Distribuciones Martínez S.L.',tax_id:'B12345678'},{id:'SUP002',code:'PRV002',name:'Agrícola del Sur S.A.',tax_id:'A23456789'},{id:'SUP003',code:'PRV003',name:'Industrias Lácteas Norte',tax_id:'A34567890'},{id:'SUP004',code:'PRV004',name:'Pastas Italia Import S.L.',tax_id:'B45678901'},{id:'SUP005',code:'PRV005',name:'Conservas Levante S.A.',tax_id:'A56789012'}];
 
-
-// ========== INICIALIZACIÓN DE BASE DE DATOS ==========
-var DB={
-  locations: LOCATIONS || [],
-  orders: [],
-  stock_by_location: [],
-  pallets: [],
-  movements: [],
-  seq: {mov:1000, rec:1000, pal:1000},
-  lots: [],
-  quality_blocks: []
-};
-
-// Funciones necesarias para que Dashboard funcione
-function gP(id){return PRODUCTS.find(function(p){return p.id===id;});}
-function gS(id){return SUPPLIERS.find(function(s){return s.id===id;});}
-function gC(id){return CLIENTS.find(function(c){return c.id===id;});}
-function gR(id){return ROUTES.find(function(r){return r.id===id;});}
-function gCar(id){return CARRIERS.find(function(c){return c.id===id;});}
-function gL(x){if(typeof x==='number')return DB.locations.find(function(l){return l.id===x;});return DB.locations.find(function(l){return l.Ubicacion===x;});}
-function stVal(pid){return (gP(pid)?gP(pid).price_unit:0) * 10;}
-function dl(d){return d?Math.ceil((new Date(d)-new Date())/86400000):9999;}
-function fmt(d){return d?d.split('-').reverse().join('/'):'—';}
-function hoy(){return new Date().toISOString().split('T')[0];}
-function alertasRep(){return [];}
-function cadAlerts(){return [];}
-function ordsPrio(){return [];}
 
 var CLIENTS=[{id:'CLI001',code:'C001',name:'Carrefour España S.A.',tax_id:'A58013494',priority_class:'A',route_id:'RT01'},{id:'CLI002',code:'C002',name:'Mercadona S.A.',tax_id:'A46103834',priority_class:'A',route_id:'RT01'},{id:'CLI003',code:'C003',name:'Dia S.A.',tax_id:'A28512748',priority_class:'A',route_id:'RT02'},{id:'CLI004',code:'C004',name:'El Corte Inglés Alim.',tax_id:'A28010869',priority_class:'B',route_id:'RT02'},{id:'CLI005',code:'C005',name:'Alcampo Hipermercados',tax_id:'A79211972',priority_class:'B',route_id:'RT01'},{id:'CLI006',code:'C006',name:'Supermercados Spar',tax_id:'B12567890',priority_class:'B',route_id:'RT03'},{id:'CLI007',code:'C007',name:'Frutas García e Hijos',tax_id:'B23678901',priority_class:'C',route_id:'RT02'},{id:'CLI008',code:'C008',name:'Minimarket Samir',tax_id:'B34789012',priority_class:'C',route_id:'RT03'},{id:'CLI009',code:'C009',name:'Bar El Patio',tax_id:'B45890123',priority_class:'C',route_id:'RT03'},{id:'CLI010',code:'C010',name:'Colmado Hermanos López',tax_id:'B56901234',priority_class:'C',route_id:'RT01'}];
 var CARRIERS=[{id:'CAR001',name:'Transportes Rápidos S.L.',phone:'914 000 001'},{id:'CAR002',name:'Logística Express Madrid',phone:'914 000 002'}];
@@ -381,7 +356,7 @@ function navv(v){
   document.querySelectorAll('.nb').forEach(function(e){e.classList.remove('act');});
   var vEl=document.getElementById('v-'+v);if(vEl)vEl.classList.add('act');
   var nbEl=document.getElementById('nb-'+v);if(nbEl)nbEl.classList.add('act');
-  var fns={dash:rDash,rec:rRec,alm:rAlm,ped:rPed,rep:rRep,exp:rExp,inv:rInv,mae:rMae,inf:rInf,pda:rPda,sync:rSync};
+  var fns={dash:rDash,rec:rRec,ctl:rCtl,alm:rAlm,ped:rPed,rep:rRep,exp:rExp,inv:rInv,mae:rMae,inf:rInf,pda:rPda,sync:rSync};
   if(fns[v])fns[v]();
 }
 
@@ -825,6 +800,248 @@ function confirmScan(){
     document.getElementById('scanRes').innerHTML='<div class="alert alert-danger p-2 mt-2">Incorrecto. Esperado: <b>'+scanExpCode+'</b></div>';
     inp.value='';inp.focus();
   }
+}
+
+// ============================================================
+// CONTROL DE ALMACÉN (verificación + ubicación de mercancía existente)
+// Flujo: escanear EAN caja → verificar descripción → localizar picking
+// → sugerir hueco libre más cercano → ubicar (manual tiene PRIORIDAD)
+// ============================================================
+var ctlCtx={};
+
+// Normaliza un código de ubicación para comparar (mayúsculas, sin espacios)
+function ctlNorm(u){return String(u||'').trim().toUpperCase();}
+
+// Busca una ubicación en LOCATIONS por código (Ubicacion o Ubicacion2)
+function ctlLoc(code){
+  var c=ctlNorm(code); if(!c)return null;
+  return LOCATIONS.find(function(l){return ctlNorm(l.Ubicacion)===c||ctlNorm(l.Ubicacion2)===c;});
+}
+
+// Localiza la ubicación de PICKING de una referencia:
+// 1º ubicación tipo Picking con ese EAN asignado · 2º campo Picking del maestro de artículos
+function ctlPickingDe(ean,art){
+  ean=String(ean||'').trim();
+  var pick=LOCATIONS.find(function(l){
+    var esPick=String(l.Tipo_Ubicacion||'').toLowerCase().indexOf('picking')>=0||String(l.Nivel)==='00';
+    return esPick&&String(l.EAN||'').trim()===ean;
+  });
+  if(pick)return pick;
+  if(art&&art.Picking){var byCode=ctlLoc(art.Picking);if(byCode)return byCode;}
+  if(art&&art.Picking2){var byCode2=ctlLoc(art.Picking2);if(byCode2)return byCode2;}
+  return null;
+}
+
+// Distancia física entre dos ubicaciones (formato A/01/03):
+// pasillo distinto pesa mucho > diferencia de posición > altura
+function ctlDist(a,b){
+  var ua=parseUbic(a.Ubicacion||''),ub=parseUbic(b.Ubicacion||'');
+  var dP=Math.abs((ua.pasillo.charCodeAt(0)||0)-(ub.pasillo.charCodeAt(0)||0));
+  var dC=Math.abs((parseInt(ua.posicion,10)||0)-(parseInt(ub.posicion,10)||0));
+  var dN=Math.abs((parseInt(ua.nivel,10)||0)-(parseInt(ub.nivel,10)||0));
+  return dP*1000+dC*10+dN;
+}
+
+// Huecos libres (alturas, no picking) ordenados por cercanía a la ubicación de picking
+function ctlHuecosCercanos(pickLoc,n){
+  n=n||5;
+  var libres=LOCATIONS.filter(function(l){
+    var libre=String(l.Estado||'').toLowerCase().indexOf('libre')>=0;
+    var esAltura=String(l.Nivel)!=='00'&&String(l.Tipo_Ubicacion||'').toLowerCase().indexOf('picking')<0;
+    return libre&&esAltura;
+  });
+  if(!libres.length)return [];
+  if(pickLoc){libres.sort(function(a,b){return ctlDist(a,pickLoc)-ctlDist(b,pickLoc);});}
+  else{libres.sort(function(a,b){return (parseFloat(a.DistanciaPicking)||9999)-(parseFloat(b.DistanciaPicking)||9999);});}
+  return libres.slice(0,n);
+}
+
+function rCtl(){
+  var c=ctlCtx;
+  var h='<div class="sec"><i class="bi bi-clipboard2-check me-2"></i>Control de Almacén — Verificación y Ubicación</div>';
+  h+='<div class="row g-2"><div class="col-lg-5">';
+  // --- Escaneo EAN ---
+  h+='<div class="card mb-2"><div class="ch"><i class="bi bi-upc-scan me-2"></i>1 · Escanea el EAN de la caja</div><div class="card-body p-3">';
+  h+='<div class="d-flex gap-2"><input type="text" class="form-control form-control-sm" id="cEAN" value="'+(c.ean||'')+'" placeholder="Escanea o teclea el EAN" autocomplete="off" onkeydown="if(event.key===\'Enter\')ctlBuscarEAN()">';
+  h+='<button class="btn btn-sm btn-dark" onclick="abrirEscaner(function(code){document.getElementById(\'cEAN\').value=code;ctlBuscarEAN();})"><i class="bi bi-camera"></i></button>';
+  h+='<button class="btn btn-sm btn-primary" onclick="ctlBuscarEAN()">Buscar</button></div>';
+  if(c.buscado){
+    if(c.art){
+      h+='<div class="alert alert-success p-2 mt-2 mb-0" style="font-size:12px"><i class="bi bi-check-circle-fill me-1"></i><b>VERIFICA la mercancía:</b>';
+      h+='<div style="font-size:15px;font-weight:800;margin-top:4px">'+(c.art.Descripcion_Producto||'—')+'</div>';
+      h+='<div class="mt-1" style="font-size:11px">EAN: <code>'+c.ean+'</code> · Ref: <b>'+(c.art.IdArticulos||'—')+'</b> · Familia: '+(c.art.Familia||'—')+' · Rotación: '+(c.art.Rotacion||'—')+'</div></div>';
+    }else{
+      h+='<div class="alert alert-danger p-2 mt-2 mb-0" style="font-size:12px"><i class="bi bi-x-circle-fill me-1"></i>EAN <code>'+c.ean+'</code> NO existe en el maestro de artículos. Revisa la caja o da de alta la referencia en Maestros.</div>';
+    }
+  }
+  h+='</div></div>';
+  // --- Picking + hueco sugerido ---
+  if(c.buscado&&c.art){
+    h+='<div class="card mb-2"><div class="ch"><i class="bi bi-geo-alt me-2"></i>2 · Ubicación de picking de esta referencia</div><div class="card-body p-3">';
+    if(c.pickLoc){
+      h+='<div style="font-size:18px;font-weight:800;color:var(--azc)">'+c.pickLoc.Ubicacion+'</div>';
+      h+='<div class="text-muted" style="font-size:11px">Pasillo '+(c.pickLoc.Pasillo||'—')+' · Posición '+(c.pickLoc.Estanteria||'—')+' ('+(c.pickLoc.Lado||'—')+') · '+(c.pickLoc.Descripcion||'')+'</div>';
+    }else{
+      h+='<div class="alert alert-warning p-2 mb-0" style="font-size:11px"><i class="bi bi-exclamation-triangle me-1"></i>Esta referencia no tiene picking asignado en el mapa de almacén. La sugerencia usará el campo DistanciaPicking del LayOut.</div>';
+    }
+    h+='</div></div>';
+    h+='<div class="card mb-2"><div class="ch"><i class="bi bi-bullseye me-2"></i>3 · Hueco libre más cercano (sugerido)</div><div class="card-body p-3">';
+    if(c.sugerencias&&c.sugerencias.length){
+      c.sugerencias.forEach(function(s,i){
+        var sel=(c.autoSel===s.Ubicacion);
+        h+='<div class="d-flex justify-content-between align-items-center border-bottom py-1">';
+        h+='<div><span style="font-size:14px;font-weight:'+(i===0?'800':'600')+';color:'+(i===0?'var(--gn)':'#444')+'">'+s.Ubicacion+'</span>';
+        h+='<span class="text-muted ms-2" style="font-size:10px">Pas. '+(s.Pasillo||'—')+' · Niv. '+(s.Nivel||'—')+(i===0?' · MÁS CERCANO':'')+'</span></div>';
+        h+='<button class="btn btn-sm '+(sel?'btn-success':'btn-outline-success')+'" style="font-size:10px;padding:2px 8px" onclick="ctlCtx.autoSel=\''+s.Ubicacion+'\';rCtl()">'+(sel?'✓ Elegido':'Elegir')+'</button></div>';
+      });
+    }else{
+      h+='<div class="alert alert-danger p-2 mb-0" style="font-size:11px">Sin huecos libres en alturas. Revisa el mapa de almacén.</div>';
+    }
+    h+='</div></div>';
+  }
+  h+='</div><div class="col-lg-7">';
+  // --- Ubicación manual + confirmación ---
+  if(c.buscado&&c.art){
+    h+='<div class="card mb-2" style="border:2px solid var(--na)"><div class="ch" style="background:var(--na);color:#fff"><i class="bi bi-hand-index-thumb me-2"></i>4 · Ubicación MANUAL (prioridad sobre la sugerida)</div><div class="card-body p-3">';
+    h+='<div class="text-muted mb-2" style="font-size:11px">Mientras se regulariza el almacén: si la mercancía ya está en un hueco, escanea o teclea esa ubicación. La etiqueta llevará SIEMPRE la manual si la informas.</div>';
+    h+='<div class="d-flex gap-2"><input type="text" class="form-control form-control-sm" id="cUbicMan" value="'+(c.ubicMan||'')+'" placeholder="Ej: A/03/02" autocomplete="off" oninput="ctlCtx.ubicMan=this.value">';
+    h+='<button class="btn btn-sm btn-dark" onclick="abrirEscaner(function(code){ctlCtx.ubicMan=code;rCtl();})"><i class="bi bi-camera"></i></button></div>';
+    if(c.ubicManErr){h+='<div class="alert alert-danger p-2 mt-2 mb-0" style="font-size:11px">'+c.ubicManErr+'</div>';}
+    h+='</div></div>';
+    var elegida=ctlNorm(c.ubicMan)?ctlNorm(c.ubicMan):(c.autoSel||(c.sugerencias&&c.sugerencias[0]?c.sugerencias[0].Ubicacion:''));
+    var modo=ctlNorm(c.ubicMan)?'MANUAL':'AUTOMÁTICA';
+    h+='<div class="card mb-2"><div class="ch"><i class="bi bi-check2-square me-2"></i>5 · Confirmar ubicación</div><div class="card-body p-3">';
+    h+='<div class="mb-2" style="font-size:13px">Ubicación a confirmar: <b style="font-size:16px;color:var(--azc)">'+(elegida||'—')+'</b> <span class="badge '+(modo==='MANUAL'?'bg-warning text-dark':'bg-success')+'" style="font-size:9px">'+modo+'</span></div>';
+    h+='<div class="row g-2 mb-2"><div class="col-4"><label class="fw-bold" style="font-size:11px">Nº BULTOS/CAJAS</label><input type="number" class="form-control form-control-sm mt-1" id="cCant" min="1" value="'+(c.cant||1)+'" oninput="ctlCtx.cant=this.value"></div>';
+    h+='<div class="col-8"><label class="fw-bold" style="font-size:11px">OBSERVACIONES</label><input type="text" class="form-control form-control-sm mt-1" id="cObs" value="'+(c.obs||'')+'" oninput="ctlCtx.obs=this.value"></div></div>';
+    h+='<button class="btn btn-primary w-100" onclick="ctlConfirmar()"><i class="bi bi-tag-fill me-2"></i>Confirmar hueco ocupado y generar etiqueta</button>';
+    h+='</div></div>';
+  }
+  // --- Controles de hoy ---
+  h+='<div class="card"><div class="ch"><i class="bi bi-clock-history me-2"></i>Controles de hoy</div><div class="card-body p-0"><div class="table-responsive"><table class="table tbl table-hover mb-0"><thead style="font-size:11px;background:#f5f7fa"><tr><th>Id</th><th>EAN</th><th>Descripción</th><th>Picking</th><th>Ubicación</th><th>Modo</th><th></th></tr></thead><tbody>';
+  var hoyCtl=CONTROLES.filter(function(x){return (x.Fecha_Hora||'').slice(0,10)===hoy();});
+  if(hoyCtl.length){hoyCtl.slice().reverse().forEach(function(x){
+    h+='<tr><td><code style="font-size:10px">'+x.IdControl+'</code></td><td style="font-size:10px">'+x.EAN+'</td><td style="font-size:11px">'+String(x.Descripcion||'').substring(0,22)+'</td><td style="font-size:10px">'+(x.UbicacionPicking||'—')+'</td><td><b style="font-size:11px">'+x.UbicacionAsignada+'</b></td><td><span class="badge '+(x.Modo==='MANUAL'?'bg-warning text-dark':'bg-success')+'" style="font-size:9px">'+x.Modo+'</span></td>';
+    h+='<td><button class="btn btn-sm btn-outline-primary" style="font-size:9px;padding:1px 5px" onclick="ctlVerEtiqueta(\''+x.IdControl+'\')" title="Ver etiqueta"><i class="bi bi-tags"></i></button> <button class="btn btn-sm btn-outline-danger" style="font-size:9px;padding:1px 5px" onclick="ctlEliminar(\''+x.IdControl+'\')" title="Anular (libera el hueco)"><i class="bi bi-trash"></i></button></td></tr>';});}
+  else{h+='<tr><td colspan="7" class="text-muted text-center py-4">Sin controles hoy</td></tr>';}
+  h+='</tbody></table></div></div></div>';
+  h+='</div></div>';
+  document.getElementById('v-ctl').innerHTML=h;
+  setTimeout(function(){var e=document.getElementById('cEAN');if(e&&!ctlCtx.buscado)e.focus();},150);
+}
+
+function ctlBuscarEAN(){
+  var ean=String((document.getElementById('cEAN')||{}).value||'').trim();
+  if(!ean){toast('Escanea o teclea un EAN','warn');return;}
+  var art=recArtPorEAN(ean);
+  var pickLoc=art?ctlPickingDe(ean,art):null;
+  ctlCtx={ean:ean,buscado:true,art:art||null,pickLoc:pickLoc,sugerencias:art?ctlHuecosCercanos(pickLoc,5):[],cant:1};
+  rCtl();
+}
+
+function ctlConfirmar(){
+  var c=ctlCtx;
+  if(!c.art){toast('Primero escanea un EAN válido','warn');return;}
+  c.ubicManErr='';
+  var manual=ctlNorm(c.ubicMan);
+  var loc=null, modo='';
+  if(manual){
+    loc=ctlLoc(manual);
+    if(!loc){c.ubicManErr='La ubicación <b>'+manual+'</b> no existe en el mapa de almacén. Revísala o impórtala en Maestros → Ubicaciones.';rCtl();return;}
+    if(String(loc.Estado||'').toLowerCase().indexOf('ocupado')>=0&&!confirm('La ubicación '+loc.Ubicacion+' figura como OCUPADA.\n¿Confirmar igualmente y sobrescribir?'))return;
+    modo='MANUAL';
+  }else{
+    var auto=c.autoSel||(c.sugerencias&&c.sugerencias[0]?c.sugerencias[0].Ubicacion:'');
+    if(!auto){toast('No hay hueco sugerido ni ubicación manual','warn');return;}
+    loc=ctlLoc(auto);
+    if(!loc){toast('Ubicación sugerida no encontrada','err');return;}
+    modo='AUTO';
+  }
+  // Marcar hueco ocupado y asociar la referencia al hueco (acelera futuros controles)
+  loc.Estado='Ocupado';
+  loc.EAN=c.ean;
+  if(!loc.Descripcion)loc.Descripcion=c.art.Descripcion_Producto||'';
+  var id='CT'+Date.now().toString().slice(-8);
+  CONTROLES.push({
+    IdControl:id, Fecha_Hora:new Date().toISOString(), EAN:c.ean,
+    IdArticulo:c.art.IdArticulos||'', Descripcion:c.art.Descripcion_Producto||'',
+    UbicacionPicking:c.pickLoc?c.pickLoc.Ubicacion:'', UbicacionAsignada:loc.Ubicacion,
+    Modo:modo, Cantidad:parseInt(c.cant)||1, Observaciones:c.obs||'',
+    Usuario:(typeof CU!=='undefined'&&CU?CU.name:'')
+  });
+  toast('Hueco '+loc.Ubicacion+' confirmado como OCUPADO ('+modo+')','ok',3500);
+  ctlGuardarDrive();
+  ctlCtx={};
+  ctlVerEtiqueta(id);
+}
+
+function ctlEliminar(id){
+  var x=CONTROLES.find(function(k){return k.IdControl===id;});
+  if(!x)return;
+  if(!confirm('¿Anular el control '+id+'?\nSe liberará el hueco '+x.UbicacionAsignada+'.'))return;
+  var loc=ctlLoc(x.UbicacionAsignada);
+  if(loc){loc.Estado='Libre';if(String(loc.EAN||'').trim()===String(x.EAN||'').trim())loc.EAN='';}
+  CONTROLES=CONTROLES.filter(function(k){return k.IdControl!==id;});
+  toast('Control anulado · hueco liberado','ok');
+  ctlGuardarDrive();
+  rCtl();
+}
+
+// Guarda controles + ubicaciones + backup en Drive
+async function ctlGuardarDrive(){
+  if(!gAccessToken){toast('Guardado en local. Conéctate a Drive para sincronizar.','warn',5000);return;}
+  try{
+    var carp=await driveCarpetas();
+    await driveUpsert('Controles.json',CONTROLES,carp.maes);
+    await driveUpsert('Ubicaciones.json',LOCATIONS,carp.maes);
+    await driveUpsert(BACKUP_NAME,snapshotEstado(),carp.cop);
+    syncLog('✅ Control guardado en Drive ('+CONTROLES.length+' controles)');
+  }catch(e){syncLog('❌ Error guardando control: '+e.message);toast('Error guardando en Drive: '+e.message,'err',6000);}
+}
+
+// Etiqueta del control — misma plantilla Zebra 20×10 que Recepción
+// UBIC = ubicación confirmada (la manual SIEMPRE tiene prioridad) · PICKING = ubicación picking de la referencia
+function ctlVerEtiqueta(id){
+  var x=CONTROLES.find(function(k){return k.IdControl===id;});
+  if(!x){rCtl();return;}
+  var fecha=(x.Fecha_Hora||'').slice(0,10);
+  var h='<div class="sec"><i class="bi bi-tags me-2"></i>Etiqueta de ubicación — Control '+x.IdControl+'</div>';
+  h+='<div class="mb-3 d-flex gap-2"><button class="btn btn-sm btn-outline-secondary" onclick="ctlCtx={};rCtl()"><i class="bi bi-arrow-left me-1"></i>Volver</button>';
+  h+='<button class="btn btn-sm btn-success" onclick="ctlImprimir(\''+id+'\')"><i class="bi bi-printer me-1"></i>Imprimir (Zebra 20×10 cm)</button>';
+  h+='<span class="text-muted align-self-center" style="font-size:11px">Vista previa a escala — impresión a tamaño real 200×100 mm</span></div>';
+  h+='<div style="width:400px;height:200px;border:1px solid #999;border-radius:6px;padding:8px;display:flex;flex-direction:column;background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.1)">';
+  h+='<div style="display:flex;justify-content:space-between;align-items:flex-start;font-size:10px;font-weight:700"><div>'+fecha+'</div><div style="text-align:right">'+x.IdControl+'</div></div>';
+  h+='<div class="recdesc" style="text-align:center;font-size:16px;font-weight:800;line-height:1.05;margin:2px 0;white-space:nowrap;overflow:hidden">'+x.Descripcion+'</div>';
+  h+='<div style="display:flex;gap:10px;align-items:center;flex:1"><div style="text-align:center;flex:1"><svg id="ctlLbl"></svg></div>';
+  h+='<div style="font-size:14px;line-height:1.4;min-width:130px;font-weight:700"><div>CANT: <b>'+x.Cantidad+'</b></div><div>MODO: <b>'+x.Modo+'</b></div></div></div>';
+  h+='<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div style="background:#000;color:#fff;padding:4px 10px;border-radius:4px;font-size:14px;font-weight:800">UBIC: '+x.UbicacionAsignada+'</div><div style="background:#000;color:#fff;padding:4px 10px;border-radius:4px;font-size:14px;font-weight:800">PICKING: '+(x.UbicacionPicking||'-')+'</div></div>';
+  h+='</div>';
+  document.getElementById('v-ctl').innerHTML=h;
+  setTimeout(function(){
+    try{JsBarcode('#ctlLbl',x.EAN,{format:'EAN13',height:50,width:2,fontSize:13,margin:2});}catch(e){try{JsBarcode('#ctlLbl',x.EAN,{format:'CODE128',height:50,width:2,fontSize:13,margin:2});}catch(e2){}}
+    document.querySelectorAll('.recdesc').forEach(function(d){var fs=16;d.style.fontSize=fs+'px';var g=0;while(d.scrollWidth>d.clientWidth&&fs>7&&g<60){fs-=0.5;d.style.fontSize=fs+'px';g++;}});
+  },200);
+}
+
+function ctlImprimir(id){
+  var x=CONTROLES.find(function(k){return k.IdControl===id;});if(!x)return;
+  var fecha=(x.Fecha_Hora||'').slice(0,10);
+  var w=window.open('','_blank');
+  var html='<html><head><title>Etiqueta '+x.IdControl+'</title><scr'+'ipt src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"><\/scr'+'ipt>';
+  html+='<style>@page{size:200mm 100mm;margin:0}*{box-sizing:border-box}body{font-family:Arial,sans-serif;margin:0}';
+  html+='.lbl{width:200mm;height:100mm;padding:5mm;display:flex;flex-direction:column}';
+  html+='.top{display:flex;justify-content:space-between;align-items:flex-start;font-size:5mm;font-weight:700}';
+  html+='.desc{text-align:center;font-size:11mm;font-weight:800;line-height:1.05;margin:2mm 0;white-space:nowrap;overflow:hidden}';
+  html+='.mid{display:flex;gap:8mm;align-items:center;flex:1}.bc{flex:1;text-align:center}.bc svg{width:110mm;height:auto}';
+  html+='.info{font-size:9mm;line-height:1.5;font-weight:800;min-width:60mm}';
+  html+='.bottom{display:flex;justify-content:space-between;align-items:center;gap:6mm}';
+  html+='.box{background:#000;color:#fff;padding:3mm 6mm;font-size:8mm;font-weight:800;border-radius:2mm}</style></head><body>';
+  html+='<div class="lbl"><div class="top"><div>'+fecha+'</div><div style="text-align:right">'+x.IdControl+'</div></div>';
+  html+='<div class="desc">'+x.Descripcion+'</div>';
+  html+='<div class="mid"><div class="bc"><svg id="b0"></svg></div><div class="info">CANT: '+x.Cantidad+'<br>MODO: '+x.Modo+'</div></div>';
+  html+='<div class="bottom"><div class="box">UBIC: '+x.UbicacionAsignada+'</div><div class="box">PICKING: '+(x.UbicacionPicking||'-')+'</div></div></div>';
+  html+='<scr'+'ipt>window.onload=function(){try{JsBarcode("#b0","'+x.EAN+'",{format:"EAN13",height:80,width:3,fontSize:22,margin:0});}catch(e){try{JsBarcode("#b0","'+x.EAN+'",{format:"CODE128",height:80,width:3,fontSize:22,margin:0});}catch(e2){}}document.querySelectorAll(".desc").forEach(function(d){var fs=44;d.style.fontSize=fs+"px";var g=0;while(d.scrollWidth>d.clientWidth&&fs>12&&g<80){fs-=1;d.style.fontSize=fs+"px";g++;}});setTimeout(function(){window.print();},500);};<\/scr'+'ipt></body></html>';
+  w.document.write(html);w.document.close();
 }
 
 // ============================================================
@@ -1383,7 +1600,7 @@ function rMaeArts(){
   h+='<thead style="font-size:9px;background:#f5f7fa;position:sticky;top:0"><tr>';
   ART_CAMPOS.forEach(function(c){h+='<th>'+c+'</th>';});
   h+='</tr></thead><tbody>';
-  if(vis.length){ vis.forEach(function(o){h+='<tr>';ART_CAMPOS.forEach(function(c){var v=o[c];v=(v==null)?'':v;h+='<td'+(c==='IdArticulos'?' style="font-weight:600"':'')+'>'+v+'</td>';});h+='</tr>';}); }
+  if(vis.length){ vis.forEach(function(o){h+='<tr style="cursor:pointer" onclick="editarMaestro(\'prod\',\''+String(o.id).replace(/'/g,"\\'")+'\')" title="Clic para editar">';ART_CAMPOS.forEach(function(c){var v=o[c];v=(v==null)?'':v;h+='<td'+(c==='IdArticulos'?' style="font-weight:600"':'')+'>'+v+'</td>';});h+='</tr>';}); }
   else { h+='<tr><td colspan="'+ART_CAMPOS.length+'" class="text-muted text-center py-4">Sin artículos. Pulsa "Importar Artículos" para cargar la hoja MaestroArticulos.</td></tr>'; }
   h+='</tbody></table></div></div></div>';
   if(lista.length>CAP){h+='<div class="alert alert-info py-2 mt-2 mb-0" style="font-size:11px">Mostrando los primeros '+CAP+' de '+lista.length+' artículos. Usa el buscador o el filtro de familia.</div>';}
@@ -1457,7 +1674,7 @@ var PROV_CAMPOS=['IdProv','Proveedor'];
 var TRANS_CAMPOS=['IdTransportistas','Transportista','Observaciones'];
 var USER_CAMPOS=['Id_User','email','Nombre','Rol','Activo','Almacen_Asignado'];
 var ARTS=[], PROVS=[], TRANSP=[], USUARIOS=[];
-var PEDIDOS=[], RECEP=[];
+var PEDIDOS=[], RECEP=[], CONTROLES=[];
 var recMode='ean', recCtx={};
 var PED_CAMPOS=['IdPedido','SERIE','NumeroPedido','PROVEEDOR','FECHA_ALB','FECHA_ENTREGA','REFERENCIA','Descripcion_Producto','CANTIDAD','UbicacionPicking','EAN','Estado_Pedido','Cantidad_Recibida','Id_Linea_Pedido','Cantidad_Pendiente'];
 var maeArtF={q:'',fam:''}, maePrvF={q:''}, maeCarF={q:''}, maeUsrF={q:''};
@@ -1500,7 +1717,7 @@ function importarHojaExcel(input, sheetPref, campos, keyCampo, getArr, setArr){
   rd.readAsArrayBuffer(file);
 }
 // Renderizador genérico de tabla maestro (columnas exactas, buscador, tope de filas)
-function tablaMaestro(arr,campos,filtro,setFiltroJS,importBtn){
+function tablaMaestro(arr,campos,filtro,setFiltroJS,importBtn,tipo){
   var q=(filtro.q||'').toUpperCase();
   var lista=arr.filter(function(o){return !q||campos.some(function(c){return String(o[c]==null?'':o[c]).toUpperCase().indexOf(q)>=0;});});
   var CAP=200, vis=lista.slice(0,CAP);
@@ -1512,11 +1729,86 @@ function tablaMaestro(arr,campos,filtro,setFiltroJS,importBtn){
   h+='<thead style="font-size:9px;background:#f5f7fa;position:sticky;top:0"><tr>';
   campos.forEach(function(c){h+='<th>'+c+'</th>';});
   h+='</tr></thead><tbody>';
-  if(vis.length){ vis.forEach(function(o){ h+='<tr>'; campos.forEach(function(c){var v=o[c];v=(v==null)?'':v;h+='<td'+(c===campos[0]?' style="font-weight:600"':'')+'>'+v+'</td>';}); h+='</tr>'; }); }
+  if(vis.length){ vis.forEach(function(o){ h+='<tr style="cursor:pointer" onclick="editarMaestro(\''+tipo+'\',\''+String(o.id).replace(/'/g,"\\'")+'\')" title="Clic para editar">'; campos.forEach(function(c){var v=o[c];v=(v==null)?'':v;h+='<td'+(c===campos[0]?' style="font-weight:600"':'')+'>'+v+'</td>';}); h+='</tr>'; }); }
   else { h+='<tr><td colspan="'+campos.length+'" class="text-muted text-center py-4">Sin datos. Usa el botón de importar.</td></tr>'; }
   h+='</tbody></table></div></div></div>';
   if(lista.length>CAP){h+='<div class="alert alert-info py-2 mt-2 mb-0" style="font-size:11px">Mostrando los primeros '+CAP+' de '+lista.length+'. Usa el buscador para acotar.</div>';}
   return h;
+}
+
+// Interpreta el código de ubicación A/01/03 → pasillo, posición, nivel, lado, tipo
+// Nivel 00 = Picking (primer nivel) · 01,02,03... = alturas · posición impar = izquierda, par = derecha
+function parseUbic(code){
+  code=String(code||'').trim();
+  var p=code.split('/');
+  var pasillo=p[0]||'', pos=p[1]||'', niv=p[2]||'';
+  var posN=parseInt(pos,10);
+  var lado=isNaN(posN)?'':(posN%2===1?'Izquierda':'Derecha');
+  var par=isNaN(posN)?'':(posN%2===1?'Impar':'Par');
+  var tipo=(niv==='00'||niv===0)?'Picking':'Altura';
+  return {pasillo:pasillo,posicion:pos,nivel:niv,lado:lado,parimpar:par,tipo:tipo};
+}
+// Rellena los campos derivados de una ubicación a partir de su código (si están vacíos)
+function derivarUbic(o){
+  var u=parseUbic(o.Ubicacion);
+  if(!o.Pasillo)o.Pasillo=u.pasillo;
+  if(!o.Estanteria)o.Estanteria=u.posicion;
+  if(o.Nivel===''||o.Nivel==null)o.Nivel=u.nivel;
+  if(!o.Lado)o.Lado=u.lado;
+  if(!o['Par/Impar'])o['Par/Impar']=u.parimpar;
+  if(!o.Tipo_Ubicacion)o.Tipo_Ubicacion=u.tipo;
+  return o;
+}
+
+// ===== EDITOR GENÉRICO DE REGISTROS (clic en fila → editar) =====
+function maestroRegMae(tipo){
+  var R={
+    prod:{campos:ART_CAMPOS,  get:function(){return ARTS;},     set:function(a){ARTS=a;},     sheet:'MaestroArticulos'},
+    prov:{campos:PROV_CAMPOS, get:function(){return PROVS;},    set:function(a){PROVS=a;},    sheet:'Proveedor'},
+    carr:{campos:TRANS_CAMPOS,get:function(){return TRANSP;},   set:function(a){TRANSP=a;},   sheet:'Transportistas'},
+    usr: {campos:USER_CAMPOS, get:function(){return USUARIOS;}, set:function(a){USUARIOS=a;}, sheet:'Usuarios'},
+    ubi: {campos:MAPA_CAMPOS, get:function(){return LOCATIONS;},set:function(a){LOCATIONS=a;},sheet:'Ubicaciones'}
+  };
+  return R[tipo];
+}
+function editarMaestro(tipo,id){
+  var r=maestroRegMae(tipo); if(!r)return;
+  var arr=r.get();
+  var obj=arr.find(function(o){return String(o.id)===String(id);});
+  if(!obj){toast('Registro no encontrado','warn');return;}
+  abrirEditorRegistro('Editar registro · '+id, r.campos, obj, function(nuevo){
+    nuevo.id=obj.id;
+    if(tipo==='ubi')derivarUbic(nuevo);
+    var idx=arr.findIndex(function(o){return String(o.id)===String(id);});
+    arr[idx]=nuevo; r.set(arr);
+    toast('Registro actualizado','ok');
+    guardarMaestroInmediato(r.sheet,arr);
+    rMae();
+  });
+}
+function abrirEditorRegistro(titulo,campos,obj,onSave){
+  var ov=document.createElement('div');
+  ov.id='editOverlay';
+  ov.style.cssText='position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:12px';
+  var inner='<div style="background:#fff;border-radius:10px;max-width:700px;width:100%;max-height:90vh;overflow:auto">';
+  inner+='<div style="background:#1a3c6e;color:#fff;padding:12px 16px;font-weight:700;position:sticky;top:0;z-index:2">'+titulo+'</div>';
+  inner+='<div style="padding:16px"><div class="row g-2">';
+  campos.forEach(function(c,i){
+    var v=obj[c]; v=(v==null)?'':v;
+    inner+='<div class="col-md-6"><label class="fw-bold" style="font-size:10px">'+c+'</label><input class="form-control form-control-sm mt-1" id="edit_'+i+'" value="'+String(v).replace(/"/g,'&quot;')+'"></div>';
+  });
+  inner+='</div></div>';
+  inner+='<div style="padding:12px 16px;border-top:1px solid #eee;display:flex;gap:8px;justify-content:flex-end;position:sticky;bottom:0;background:#fff">';
+  inner+='<button class="btn btn-sm btn-outline-secondary" onclick="document.getElementById(\'editOverlay\').remove()">Cancelar</button>';
+  inner+='<button class="btn btn-sm btn-primary" id="editSaveBtn">Guardar cambios</button></div></div>';
+  ov.innerHTML=inner;
+  document.body.appendChild(ov);
+  document.getElementById('editSaveBtn').onclick=function(){
+    var nuevo=Object.assign({},obj);
+    campos.forEach(function(c,i){var e=document.getElementById('edit_'+i);if(e)nuevo[c]=e.value;});
+    ov.remove();
+    onSave(nuevo);
+  };
 }
 
 // Los 31 campos del Mapa de Almacén (orden exacto de la hoja LayOut)
@@ -1555,7 +1847,7 @@ function rMaeUbicaciones(){
   h+='</tr></thead><tbody>';
   if(vis.length){
     vis.forEach(function(loc){
-      h+='<tr>';
+      h+='<tr style="cursor:pointer" onclick="editarMaestro(\'ubi\',\''+String(loc.id).replace(/'/g,"\\'")+'\')" title="Clic para editar">';
       MAPA_CAMPOS.forEach(function(c){
         var v=loc[c]; v=(v===null||v===undefined)?'':v;
         if(c==='Estado'){var bg=String(v).toLowerCase().indexOf('libre')>=0?'bg-success':String(v).toLowerCase().indexOf('ocupado')>=0?'bg-warning text-dark':'bg-secondary';h+='<td><span class="badge '+bg+'">'+v+'</span></td>';}
@@ -1597,6 +1889,7 @@ function importarMapaAlmacen(input){
         if(!u)return; // saltar filas sin ubicación
         var obj={id:u};
         MAPA_CAMPOS.forEach(function(c){ obj[c]=(r[c]!=null?r[c]:''); });
+        derivarUbic(obj);
         nuevas.push(obj);
       });
       if(!nuevas.length){toast('La hoja no contiene ubicaciones válidas','warn',5000);return;}
@@ -1620,13 +1913,13 @@ function importarMapaAlmacen(input){
 function rMaeCarriers(){
   var btn='<input type="file" id="fileCar" accept=".xlsx,.xls" style="display:none" onchange="importarHojaExcel(this,\'Transportistas\',TRANS_CAMPOS,\'IdTransportistas\',function(){return TRANSP;},function(a){TRANSP=a;})">'+
     '<button class="btn btn-sm btn-primary" style="font-size:11px" onclick="document.getElementById(\'fileCar\').click()"><i class="bi bi-upload me-1"></i>Importar Transportistas</button>';
-  return tablaMaestro(TRANSP,TRANS_CAMPOS,maeCarF,'maeCarF',btn);
+  return tablaMaestro(TRANSP,TRANS_CAMPOS,maeCarF,'maeCarF',btn,'carr');
 }
 // ===== Usuarios → hoja Usuarios =====
 function rMaeUsuarios(){
   var btn='<input type="file" id="fileUsr" accept=".xlsx,.xls" style="display:none" onchange="importarHojaExcel(this,\'Usuarios\',USER_CAMPOS,\'Id_User\',function(){return USUARIOS;},function(a){USUARIOS=a;})">'+
     '<button class="btn btn-sm btn-primary" style="font-size:11px" onclick="document.getElementById(\'fileUsr\').click()"><i class="bi bi-upload me-1"></i>Importar Usuarios</button>';
-  return tablaMaestro(USUARIOS,USER_CAMPOS,maeUsrF,'maeUsrF',btn);
+  return tablaMaestro(USUARIOS,USER_CAMPOS,maeUsrF,'maeUsrF',btn,'usr');
 }
 
 
@@ -1690,7 +1983,7 @@ function openExpClis(){
 function rMaePrvs(){
   var btn='<input type="file" id="filePrv" accept=".xlsx,.xls" style="display:none" onchange="importarHojaExcel(this,\'Proveedor\',PROV_CAMPOS,\'IdProv\',function(){return PROVS;},function(a){PROVS=a;})">'+
     '<button class="btn btn-sm btn-primary" style="font-size:11px" onclick="document.getElementById(\'filePrv\').click()"><i class="bi bi-upload me-1"></i>Importar Proveedores</button>';
-  return tablaMaestro(PROVS,PROV_CAMPOS,maePrvF,'maePrvF',btn);
+  return tablaMaestro(PROVS,PROV_CAMPOS,maePrvF,'maePrvF',btn,'prov');
 }
 function rMaeRuts(){var h='<div class="card"><div class="card-body p-0"><div class="table-responsive"><table class="table tbl mb-0"><thead style="font-size:10px;background:#f5f7fa"><tr><th>Código</th><th>Nombre</th><th>Carrier</th><th>Destinos</th><th>Salida</th><th>Días</th><th>Prep.</th></tr></thead><tbody>';ROUTES.forEach(function(r){var car=gCar(r.carrier_id),nP=DB.orders.filter(function(o){return o.route_id===r.id&&o.status==='PREPARADO';}).length;h+='<tr><td><code style="font-size:10px">'+r.code+'</code></td><td class="fw-bold" style="font-size:12px">'+r.name+'</td><td style="font-size:11px">'+(car?car.name:'—')+'</td><td style="font-size:11px">'+r.desc+'</td><td style="font-size:11px">'+r.dep+'</td><td><span class="badge bg-secondary" style="font-size:9px">'+r.dia+'</span></td><td><span class="'+(nP?'badge bg-success':'text-muted')+'" style="font-size:9px">'+(nP?nP+' prep.':'—')+'</span></td></tr>';});h+='</tbody></table></div></div></div>';return h;}
 function rMaeRules(){var h='<div class="card"><div class="card-body p-0"><div class="table-responsive"><table class="table tbl table-hover mb-0"><thead style="font-size:10px;background:#f5f7fa"><tr><th>Artículo</th><th>Descripción</th><th>Stock pick</th><th>Mínimo</th><th>Objetivo</th><th>Activa</th><th></th></tr></thead><tbody>';REP_RULES.forEach(function(rule){var pr=gP(rule.product_id),pick=stPick(rule.product_id),ok=pick>=rule.min_pick_qty;h+='<tr class="'+(ok?'':'row-c')+'"><td><code style="font-size:10px">'+(pr?pr.picking_code:'—')+'</code></td><td style="font-size:11px">'+(pr?pr.desc.substring(0,26):'—')+'</td><td><span class="'+(ok?'text-success':'text-danger')+' fw-bold">'+pick+'</span></td><td class="fw-bold">'+rule.min_pick_qty+'</td><td>'+rule.target_pick_qty+'</td><td><span class="badge '+(rule.active?'bg-success':'bg-secondary')+'" style="font-size:9px">'+(rule.active?'Sí':'No')+'</span></td><td><button class="btn btn-sm btn-outline-primary" style="font-size:9px;padding:1px 5px" onclick="editRule(\''+rule.product_id+'\')"><i class="bi bi-pencil"></i></button></td></tr>';});h+='</tbody></table></div></div></div>';return h;}
@@ -2445,18 +2738,6 @@ function impImportClientes(mapping,cb){
   cb(ok,err,errs);
 }
 
-function expClientes(){
-  var rows=[['Código','Nombre','NIF/CIF','Categoría','Ruta','Carrier','PedidosPendientes','PedidosPreparados','PedidosExpedidos']];
-  CLIENTS.forEach(function(cli){
-    var r=gR(cli.route_id),car=gCar(r?r.carrier_id:null);
-    var np=DB.orders.filter(function(o){return o.client_id===cli.id&&o.status==='PENDIENTE';}).length;
-    var nk=DB.orders.filter(function(o){return o.client_id===cli.id&&o.status==='PREPARADO';}).length;
-    var ne=DB.orders.filter(function(o){return o.client_id===cli.id&&o.status==='EXPEDIDO';}).length;
-    rows.push([cli.code,cli.name,cli.tax_id,cli.priority_class,r?r.name:'',car?car.name:'',np,nk,ne]);
-  });
-  expXL(rows,'Clientes','MaestroClientes');
-}
-
 function impDownloadTemplate(type){
   if(typeof XLSX==='undefined'){toast('Librería Excel no disponible','err');return;}
   var cfg=IMP_CONFIGS[type];
@@ -2732,7 +3013,8 @@ function maestrosReg(){return [
   {f:'Usuarios.json',      g:function(){return USUARIOS;},  s:function(a){USUARIOS=a;}},
   {f:'Ubicaciones.json',   g:function(){return LOCATIONS;}, s:function(a){LOCATIONS=a;}},
   {f:'Pedidos.json',       g:function(){return PEDIDOS;},   s:function(a){PEDIDOS=a;}},
-  {f:'Recepciones.json',   g:function(){return RECEP;},     s:function(a){RECEP=a;}}
+  {f:'Recepciones.json',   g:function(){return RECEP;},     s:function(a){RECEP=a;}},
+  {f:'Controles.json',     g:function(){return CONTROLES;}, s:function(a){CONTROLES=a;}}
 ];}
 var MAE_FILE={'MaestroArticulos':'Articulos.json','Proveedor':'Proveedores.json','Transportistas':'Transportistas.json','Usuarios':'Usuarios.json','Ubicaciones':'Ubicaciones.json','LayOut':'Ubicaciones.json','PedidosCompras':'Pedidos.json'};
 // Guarda un maestro en su archivo dedicado, inmediatamente (tras importar)
@@ -2837,7 +3119,7 @@ function snapshotEstado(){
     _version:'sga-dalt-v8', _timestamp:new Date().toISOString(), _usuario:(CU?CU.name:''),
     PRODUCTS:PRODUCTS, CLIENTS:CLIENTS, SUPPLIERS:SUPPLIERS, CARRIERS:CARRIERS, ROUTES:ROUTES,
     LOCATIONS:LOCATIONS, REP_RULES:REP_RULES, FAMILIES:FAMILIES, SUBFAMILIES:SUBFAMILIES, DB:DB,
-    ARTS:ARTS, PROVS:PROVS, TRANSP:TRANSP, USUARIOS:USUARIOS, PEDIDOS:PEDIDOS, RECEP:RECEP
+    ARTS:ARTS, PROVS:PROVS, TRANSP:TRANSP, USUARIOS:USUARIOS, PEDIDOS:PEDIDOS, RECEP:RECEP, CONTROLES:CONTROLES
   };
 }
 // Restaura el estado desde un snapshot
@@ -2847,7 +3129,7 @@ function aplicarEstado(s){
   if(s.REP_RULES)REP_RULES=s.REP_RULES; if(s.FAMILIES)FAMILIES=s.FAMILIES; if(s.SUBFAMILIES)SUBFAMILIES=s.SUBFAMILIES;
   if(s.DB)DB=s.DB;
   if(s.ARTS)ARTS=s.ARTS; if(s.PROVS)PROVS=s.PROVS; if(s.TRANSP)TRANSP=s.TRANSP; if(s.USUARIOS)USUARIOS=s.USUARIOS;
-  if(s.PEDIDOS)PEDIDOS=s.PEDIDOS; if(s.RECEP)RECEP=s.RECEP;
+  if(s.PEDIDOS)PEDIDOS=s.PEDIDOS; if(s.RECEP)RECEP=s.RECEP; if(s.CONTROLES)CONTROLES=s.CONTROLES;
 }
 
 async function driveBackup(){
@@ -3002,6 +3284,8 @@ async function driveExportTablas(){
   var recRows=[];
   RECEP.forEach(function(r){(r.pallets||[{}]).forEach(function(p){recRows.push({IdRecepcion:r.IdRecepcion,Fecha_Hora_Recepcion:r.Fecha_Hora_Recepcion,EAN:r.EAN,Descripcion:r.Descripcion,Familia:r.Familia||'',Grupo:r.Grupo||'',NombreProveedor:r.NombreProveedor,Lote:r.Lote,FechaCaducidad:r.FechaCaducidad,Cantidad_Recibida:p.cantidad!=null?p.cantidad:r.Cantidad_Recibida,'NºPales':r['NºPales'],TipoPale:r.TipoPale,IdPale:p.idPale||'',UbicacionReservaAsignada:p.ubicacion||'',MuelleDescarga:r.MuelleDescarga,Transportista:r.Transportista,IdPedido:r.IdPedido,Id_Linea_Pedido:r.Id_Linea_Pedido,Estado_Recepcion:r.Estado_Recepcion,Observaciones:r.Observaciones});});});
   hoja('Recepciones',recRows);
+  // Controles de almacén (verificación + ubicación)
+  hoja('Controles',CONTROLES.map(function(x){return{IdControl:x.IdControl,Fecha_Hora:x.Fecha_Hora,EAN:x.EAN,IdArticulo:x.IdArticulo,Descripcion:x.Descripcion,UbicacionPicking:x.UbicacionPicking,UbicacionAsignada:x.UbicacionAsignada,Modo:x.Modo,Cantidad:x.Cantidad,Observaciones:x.Observaciones,Usuario:x.Usuario};}));
   var bytes=XLSX.write(wb,{type:'array',bookType:'xlsx'});
   var carp=await driveCarpetas();
   await driveUpsertBin('SGA_DALT_Operaciones.xlsx',bytes,'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',carp.oper);
